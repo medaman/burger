@@ -1,62 +1,93 @@
-var connection = require("./connection");
+// Import MySQL connection.
+var connection = require("../config/connection.js");
 
+// Helper function for SQL syntax.
+function printQuestionMarks(num) {
+  var arr = [];
+
+  for (var i = 0; i < num; i++) {
+    arr.push("?");
+  }
+
+  return arr.toString();
+}
+
+// Helper function for SQL syntax.
+function objToSql(ob) {
+  var arr = [];
+
+  for (var key in ob) {
+    if (Object.hasOwnProperty.call(ob, key)) {
+      arr.push(key + "=" + ob[key]);
+    }
+  }
+
+  return arr.toString();
+}
+
+// Object for all our SQL statement functions.
 var orm = {
-  selectAll: function(db) {
-    connection.connect(function(err) {
+  all: function(tableInput, cb) {
+    var queryString = "SELECT * FROM " + tableInput + ";";
+    connection.query(queryString, function(err, result) {
       if (err) {
-        return console.log(err);
+        throw err;
       }
-      connection.query(
-        "SELECT * FROM burgers",
-        function(err, results) {
-          if (err) {
-            return console.log(err);
-          }
-          return results;
-        }
-      )
-      connection.end();
+      cb(result);
     });
   },
-  insertOne: function(burgerName) {
-    connection.connect(function(err) {
+
+  create: function(table, cols, vals, cb) {
+    var queryString = "INSERT INTO " + table;
+
+    queryString += " (";
+    queryString += cols.toString();
+    queryString += ") ";
+    queryString += "VALUES (";
+    queryString += printQuestionMarks(vals.length);
+    queryString += ") ";
+
+    console.log(queryString);
+
+    connection.query(queryString, vals, function(err, result) {
       if (err) {
-        return console.log(err);
+        throw err;
       }
-      connection.query(
-        "INSERT INTO burgers SET ?",
-        {
-          burger_name: burgerName,
-          devoured: false
-        },
-        function(err) {
-          if (err) {
-            return console.log(err);
-          }
-          console.log("Product Added.")
-        }
-      )
-      connection.end();
+      cb(result);
     });
   },
-  updateOne: function(itemId) {
-    connection.connect(function(err) {
+
+  update: function(table, objColVals, condition, cb) {
+    var queryString = "UPDATE " + table;
+
+    queryString += " SET ";
+    queryString += objToSql(objColVals);
+    queryString += " WHERE ";
+    queryString += condition;
+
+    console.log(queryString);
+    connection.query(queryString, function(err, result) {
       if (err) {
-        return console.log(err);
+        throw err;
       }
-      connection.query(
-        "UPDATE burgers SET ? WHERE ?",
-        [{devoured: true}, { item_id: itemId}],
-        function(err) {
-          if(err) {
-            return console.log(err)
-          }
-          console.log("Product Updated");
-        }
-      )
-      connection.end();
+
+      cb(result);
+    });
+  },
+
+  delete: function(table, condition, cb) {
+    var queryString = "DELETE FROM " + table;
+    queryString += " WHERE ";
+    queryString += condition;
+
+    connection.query(queryString, function(err, result) {
+      if (err) {
+        throw err;
+      }
+
+      cb(result);
     });
   }
-}
+};
 
 module.exports = orm;
